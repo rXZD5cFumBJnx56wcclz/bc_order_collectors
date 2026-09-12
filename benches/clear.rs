@@ -4,7 +4,7 @@ use std::hint::black_box;
 
 use prelude::*;
 
-use bc_orders_collectors::clear::CLEAR;
+use bc_order_collectors::clear::CLEAR;
 
 static COLLECTOR: LazyLock<CLEAR> = LazyLock::new(|| CLEAR);
 

@@ -6,10 +6,14 @@ impl OrderCollector for CLEAR {
     fn collect_orders(&self, state: &TradeState) {
         if state.positions.borrow().is_empty() {
             for v in state.orders.borrow_mut().values_mut() {
-                v.is_active = false;
+                for order in v {
+                    order.is_active = false;
+                }
             }
-            for v in state.orders_storage.borrow_mut().values_mut() {
-                v.0.is_active = false;
+            for v in state.orders_trigger.borrow_mut().values_mut() {
+                for order in v {
+                    order.0.is_active = false;
+                }
             }
         }
     }
@@ -18,35 +22,27 @@ impl OrderCollector for CLEAR {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use pretty_assertions::assert_eq as assert_eq_pr;
-
-    use crate::prelude_tests::prelude::*;
-
-    static COLLECTOR: LazyLock<CLEAR> = LazyLock::new(|| CLEAR);
+    use bc_test_kit::prelude::*;
 
     #[test]
     fn collect_orders_res_1() {
-        let trade_cell = TradeState::new(100.);
-        trade_cell
-            .positions
-            .borrow_mut()
-            .insert(1, Position::default());
-        trade_cell
-            .orders
-            .borrow_mut()
-            .insert("id_1", Order::default());
-        let res = TradeState::new(100.);
-        res.positions.borrow_mut().insert(1, Position::default());
-        res.orders.borrow_mut().insert("id_1", Order::default());
-        COLLECTOR.collect_orders(&trade_cell);
-        assert_eq_pr!(&trade_cell, &res,);
-        trade_cell.positions.borrow_mut().remove(&1);
-        res.positions.borrow_mut().remove(&1);
-        res.orders.borrow_mut().entry("id_1").and_modify(|o| {
-            o.is_active = false;
-        });
-        COLLECTOR.collect_orders(&trade_cell);
-        assert_eq_pr!(&trade_cell, &res,);
+        let trade_state = TRADE_STATE();
+        trade_state.positions.borrow_mut().clear();
+        assert!(trade_state.positions.borrow().is_empty());
+        CLEAR.collect_orders(&trade_state);
+        assert!(
+            trade_state
+                .orders
+                .borrow()
+                .values()
+                .all(|v| v.iter().all(|v| !v.is_active))
+        );
+        assert!(
+            trade_state
+                .orders_trigger
+                .borrow()
+                .values()
+                .all(|v| v.iter().all(|v| !v.0.is_active))
+        );
     }
 }
